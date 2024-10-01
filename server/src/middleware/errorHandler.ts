@@ -25,11 +25,14 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
 
   if (error instanceof z.ZodError) {
     handleZodError(res, error);
+    return;
   }
 
   if (error instanceof AppError) {
-    return handleAppError(res, error);
+    handleAppError(res, error);
+    return;
   }
 
   res.status(500).send('Internal Server Error');
+  return;
 };
