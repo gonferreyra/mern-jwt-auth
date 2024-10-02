@@ -7,7 +7,7 @@ export interface UserDocument extends mongoose.Document {
   verified: boolean;
   createdAt: Date;
   updatedAt: Date;
-  __v: number;
+  __v?: number;
   comparePassword(val: string): Promise<boolean>;
   omitPassword(): Pick<
     UserDocument,
