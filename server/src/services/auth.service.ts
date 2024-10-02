@@ -6,6 +6,7 @@ import { oneYearFromNow } from '../utils/date';
 import { JWT_REFRESH_SECRET, JWT_SECRET } from '../constants/env';
 import jwt from 'jsonwebtoken';
 import appAssert from '../utils/appAssert';
+import { refreshTokenSignOptions, signToken } from '../utils/jwt';
 
 type CreateAccoutParams = {
   email: string;
@@ -100,19 +101,9 @@ export const loginUser = async ({
     sessionId: session._id,
   };
   // sign access token & refresh token
-  const refreshToken = jwt.sign(sessionInfo, JWT_REFRESH_SECRET, {
-    audience: ['user'],
-    expiresIn: '30d',
-  });
+  const refreshToken = signToken(sessionInfo, refreshTokenSignOptions);
 
-  const accessToken = jwt.sign(
-    { ...sessionInfo, sessionId: session._id },
-    JWT_SECRET,
-    {
-      audience: ['user'],
-      expiresIn: '15m',
-    }
-  );
+  const accessToken = signToken({ ...sessionInfo, sessionId: session._id });
 
   // return user & tokens
   return {
