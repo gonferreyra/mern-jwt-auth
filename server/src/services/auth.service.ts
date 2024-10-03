@@ -2,8 +2,14 @@ import VerificationCodeTypes from '../constants/verificationCodeTypes';
 import SessionModel from '../models/session.model';
 import UserModel from '../models/user.model';
 import VerificationCodeModel from '../models/verificationCode.model';
-import { ONE_DAY_MS, oneYearFromNow, thirtyDaysFromNow } from '../utils/date';
-import { API_ORIGIN, JWT_REFRESH_SECRET, JWT_SECRET } from '../constants/env';
+import {
+  fiveMinutesAgo,
+  ONE_DAY_MS,
+  oneHourFromNow,
+  oneYearFromNow,
+  thirtyDaysFromNow,
+} from '../utils/date';
+import { APP_ORIGIN, JWT_REFRESH_SECRET, JWT_SECRET } from '../constants/env';
 import jwt from 'jsonwebtoken';
 import appAssert from '../utils/appAssert';
 import {
@@ -13,7 +19,10 @@ import {
   verifyToken,
 } from '../utils/jwt';
 
-import { getVerifyEmailTemplate } from '../utils/emailTemplates';
+import {
+  getPasswordResetTemplate,
+  getVerifyEmailTemplate,
+} from '../utils/emailTemplates';
 import { sendMail } from '../utils/sendMail';
 
 type CreateAccoutParams = {
@@ -45,7 +54,7 @@ export const createAccount = async (data: CreateAccoutParams) => {
   });
 
   // send verification email
-  const url = `${API_ORIGIN}/email/verify/${verificationCode._id}`;
+  const url = `${APP_ORIGIN}/email/verify/${verificationCode._id}`;
   const { error } = await sendMail({
     to: user.email,
     ...getVerifyEmailTemplate(url),
@@ -201,5 +210,49 @@ export const verifyEmail = async (code: string) => {
   // return user
   return {
     user: updatedUser.omitPassword(),
+  };
+};
+
+export const sendPasswordResetEmail = async (email: string) => {
+  // get the user by email
+  const user = await UserModel.findOne({ email });
+  appAssert(user, 404, 'User not found');
+
+  // check email rate limit - don't allow more than 1 requests in 5 minutes
+  const fiveMinAgo = fiveMinutesAgo();
+  const count = await VerificationCodeModel.countDocuments({
+    userId: user._id,
+    type: VerificationCodeTypes.PasswordReset,
+    createdAt: { $gt: fiveMinAgo },
+  });
+  appAssert(
+    count <= 1,
+    429,
+    'Too many password reset requests, please try again later.'
+  );
+
+  // create verification code
+  const expiresAt = oneHourFromNow();
+  const verificationcode = await VerificationCodeModel.create({
+    userId: user._id,
+    type: VerificationCodeTypes.PasswordReset,
+    expiresAt,
+  });
+
+  // send verification email with code and expiresAt. If it's expired, the code will be invalid
+  const url = `${APP_ORIGIN}/password/reset?code=${
+    verificationcode._id
+  }&exp=${expiresAt.getTime()}`;
+
+  const { data, error } = await sendMail({
+    to: user.email,
+    ...getPasswordResetTemplate(url),
+  });
+  appAssert(data?.id, 500, `${error?.name} - ${error?.message}`);
+
+  // return success
+  return {
+    url,
+    emailId: data?.id,
   };
 };
