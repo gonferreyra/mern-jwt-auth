@@ -117,21 +117,21 @@ export const loginUser = async ({
   const isValid = await user.comparePassword(password);
   appAssert(isValid, 401, 'Invalid email or password.');
 
-  const userID = user._id;
+  const userId = user._id;
   // create a session
   const session = await SessionModel.create({
-    sessionId: userID,
+    userId,
     userAgent,
   });
 
   // token payload
-  const sessionInfo = {
+  const sessionInfo: RefreshTokenPayload = {
     sessionId: session._id,
   };
   // sign access token & refresh token
   const refreshToken = signToken(sessionInfo, refreshTokenSignOptions);
 
-  const accessToken = signToken({ ...sessionInfo, sessionId: session._id });
+  const accessToken = signToken({ ...sessionInfo, userId });
 
   // return user & tokens
   return {
