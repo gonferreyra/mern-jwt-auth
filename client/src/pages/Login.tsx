@@ -69,7 +69,7 @@ function Login() {
 
             <ChakraLink
               as={Link}
-              to='/password-forgot'
+              to='/password/forgot'
               fontSize='sm'
               textAlign={{
                 base: 'center',
