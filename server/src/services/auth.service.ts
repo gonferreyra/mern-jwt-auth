@@ -215,47 +215,52 @@ export const verifyEmail = async (code: string) => {
 };
 
 export const sendPasswordResetEmail = async (email: string) => {
-  // get the user by email
-  const user = await UserModel.findOne({ email });
-  appAssert(user, 404, 'User not found');
+  // try-catch added to prevent leaking data (when user try to recover password from email)
+  try {
+    // get the user by email
+    const user = await UserModel.findOne({ email });
+    appAssert(user, 404, 'User not found');
 
-  // check email rate limit - don't allow more than 1 requests in 5 minutes
-  const fiveMinAgo = fiveMinutesAgo();
-  const count = await VerificationCodeModel.countDocuments({
-    userId: user._id,
-    type: VerificationCodeTypes.PasswordReset,
-    createdAt: { $gt: fiveMinAgo },
-  });
-  appAssert(
-    count <= 1,
-    429,
-    'Too many password reset requests, please try again later.'
-  );
+    // check email rate limit - don't allow more than 1 requests in 5 minutes
+    const fiveMinAgo = fiveMinutesAgo();
+    const count = await VerificationCodeModel.countDocuments({
+      userId: user._id,
+      type: VerificationCodeTypes.PasswordReset,
+      createdAt: { $gt: fiveMinAgo },
+    });
+    appAssert(
+      count <= 1,
+      429,
+      'Too many password reset requests, please try again later.'
+    );
 
-  // create verification code
-  const expiresAt = oneHourFromNow();
-  const verificationcode = await VerificationCodeModel.create({
-    userId: user._id,
-    type: VerificationCodeTypes.PasswordReset,
-    expiresAt,
-  });
+    // create verification code
+    const expiresAt = oneHourFromNow();
+    const verificationcode = await VerificationCodeModel.create({
+      userId: user._id,
+      type: VerificationCodeTypes.PasswordReset,
+      expiresAt,
+    });
 
-  // send verification email with code and expiresAt. If it's expired, the code will be invalid
-  const url = `${APP_ORIGIN}/password/reset?code=${
-    verificationcode._id
-  }&exp=${expiresAt.getTime()}`;
+    // send verification email with code and expiresAt. If it's expired, the code will be invalid
+    const url = `${APP_ORIGIN}/password/reset?code=${
+      verificationcode._id
+    }&exp=${expiresAt.getTime()}`;
 
-  const { data, error } = await sendMail({
-    to: user.email,
-    ...getPasswordResetTemplate(url),
-  });
-  appAssert(data?.id, 500, `${error?.name} - ${error?.message}`);
+    const { data, error } = await sendMail({
+      to: user.email,
+      ...getPasswordResetTemplate(url),
+    });
+    appAssert(data?.id, 500, `${error?.name} - ${error?.message}`);
 
-  // return success
-  return {
-    url,
-    emailId: data?.id,
-  };
+    // return success
+    return {
+      url,
+      emailId: data?.id,
+    };
+  } catch (error: any) {
+    console.log('SendPasswordResetError: ', error.message);
+  }
 };
 
 type ResetPasswordParams = {
