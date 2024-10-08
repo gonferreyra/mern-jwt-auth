@@ -16,6 +16,8 @@ type ResetPasswordParams = {
 
 export const login = async (data: LoginParams) => API.post('/auth/login', data);
 
+export const logout = async () => API.get('/auth/logout');
+
 export const register = async (data: RegisterParams) =>
   API.post('/auth/register', data);
 
@@ -30,3 +32,10 @@ export const resetPassword = async ({
   password,
 }: ResetPasswordParams) =>
   API.post('/auth/password/reset', { verificationCode, password });
+
+export const getUser = async () => API.get('/user');
+
+export const getSessions = async () => API.get('/sessions');
+
+export const deleteSessions = async (id: number) =>
+  API.delete(`/sessions/${id}`);
