@@ -4,11 +4,31 @@ import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import AppContainer from './components/AppContainer';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import NavigateSetter from './components/NavigateSetter';
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <div>Hello world</div>,
+    element: (
+      <>
+        <AppContainer />,
+        <NavigateSetter />
+      </>
+    ),
+    children: [
+      {
+        index: true,
+        path: '/',
+        element: <Profile />,
+      },
+      {
+        path: 'settings',
+        element: <Settings />,
+      },
+    ],
   },
   {
     path: '/login',
@@ -33,7 +53,11 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />;
+    </>
+  );
 }
 
 export default App;
